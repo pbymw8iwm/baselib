@@ -1,0 +1,217 @@
+$#include "common.h"
+$#include "partner.h"
+$#include "player.h"
+$#include "fight.h" 
+$#include "skill.h"
+$#include "fightreport.h"
+$#include "common.h"
+
+typedef unsigned int uint32_t;
+typedef int int32_t;
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+ 
+class Player
+{
+	void addExp(int exp);
+	Net_Packet* createPakcet(int cmd);
+	void sendPacket(Net_Packet* new_packet);
+	string toString();
+	int rewardGift(const std::string& strGift);
+	void postBulletin(const string& strRewards, const string& strMsg);	
+	void deleteViewIntrest(int activetyIndex);
+	bool isInViewInstrest(int activetyIndex);
+	uint32_t mainPartnerId;	
+};
+
+class Net_Packet
+{
+	int read_uint8();	
+	int read_uint16();	
+	int read_uint32();	
+	int read_string(std::string& str, int nDataLen);	
+	
+	void write_uint8(int data);
+	void write_uint16(int data);
+	void write_uint32(int data);
+	void write_string(const std::string& str);
+}
+
+void onScriptActivetyChange(int activetyIndex, bool bUpdate);	
+void postDbReq(const std::string& strSql, int reqType, bool bUpdate);
+
+struct PartnerLevelInfo
+{
+	uint32_t ninjitsu; //忍术
+	uint32_t magic; //幻术
+	uint32_t leixlaeg; //奥义
+	uint32_t hp;
+	uint32_t chakra; 
+	uint32_t phyattack; //忍术攻击力
+	uint32_t magattack; //幻术攻击力
+	uint32_t phydefence; //忍术防御力
+	uint32_t magdefence; //幻术防御力
+	uint32_t skillattack; //奥义攻击力
+	uint32_t skilldefence; //奥义防御力
+	uint32_t hitrate; //命中率
+	uint32_t dodgerate; //闪避率
+	uint32_t crirate; //暴击率
+	uint32_t resistcrirate; //韧性率
+	uint32_t blockratio; //格挡率
+	uint32_t wreckratio; //破击率
+};
+
+struct FightProp
+{
+	uint32_t ninjitsu; //忍术
+	uint32_t magic; //幻术
+	uint32_t leixlaeg; //奥义
+	uint32_t curHp;//生命值
+	uint32_t initiative; //先攻值
+	uint32_t hitlevel; //命中等级
+	uint32_t chakra; 
+	uint32_t phyattack; //忍术攻击力
+	uint32_t magattack; //幻术攻击力
+	uint32_t phydefence; //忍术防御力
+	uint32_t magdefence; //幻术防御力
+	uint32_t skillattack; //奥义攻击力
+	uint32_t skilldefence; //奥义防御力
+	uint32_t cridamlevel; //必杀等级
+	uint32_t hitrate; //命中率
+	uint32_t dodgelevel; //闪避等级
+	uint32_t dodgerate; //闪避率
+	uint32_t critlevel; //暴击等级
+	uint32_t crirate; //暴击率
+	uint32_t resistcrilevel; //韧性等级
+	uint32_t resistcrirate; //韧性率
+	uint32_t blocklevel; //格挡等级
+	uint32_t blockratio; //格挡率
+	uint32_t wrecklevel; //破击等级
+	uint32_t wreckratio; //破击率
+	uint32_t guadefendlevel;//守御等级
+	int32_t ninjitsu_educate_value;//培养值1
+	int32_t magic_educate_value;//培养值2
+	int32_t leixlaeg_educate_value;//培养值3
+	uint32_t controlAddBufRatio; //控制效果增加概率
+	uint32_t controlResBufRatio; //控制效果抵抗概率
+	uint32_t mark_power;//命力
+	uint32_t combatPower; //战力
+};
+
+struct PlayerPartner
+{
+	uint16_t level;
+	uint8_t m_PhalanxId;//当前所在阵法的id,0表示不在任何阵法中
+	uint8_t m_curstate;//当前状态-0正常 , 1离队	
+	
+	bool isMainPartner();	
+	void  havePassiveSkill(uint32_t psTypeId, lua_Object psTbl);
+	void getPsParam(uint32_t psTypeId, lua_Object psTbl);
+};
+
+struct FightForce
+{
+	bool isNpc;
+	FightUnit* myUnits[9]; //战斗单位
+	FightField* field;
+	uint32_t initiative;
+	uint8_t liveNum;
+	uint32_t totalHp;
+};
+
+//技能类型
+enum SKILLTYPE
+{
+	ST_HARM = 1, //伤害技能
+	ST_EFFECT, //效果技能
+};
+//攻击类型
+enum ATTACKTYPE
+{
+	AT_COMMON = 1, //普通攻击
+	AT_SKILL, //技能攻击
+};
+//技能作用范围
+enum SKILL_SPAN
+{
+	SS_SINGLE = 1, //单体
+	SS_ROW = 2, //行
+	SS_COLUMN = 3,//列
+	SS_ALL = 4, //全体
+	SS_MINHP = 5, //敌方hp最低
+	SS_MAXNINJITSU = 6, //对方忍术攻击最高
+	SS_COMMATTACKLAST = 7, //主目标所在行的最后一个
+	SS_MINHPPARTNERS = 8, //敌方hp最低的几个伙伴
+	SS_ROWLAST = 9, //每行最后一个
+};
+//公式类型
+enum FORMULATYPE
+{
+	FT_PHYHARM, //体术伤害
+	FT_MAGICHARM, //忍术伤害
+};
+//技能模板
+struct SkillTem
+{
+	uint32_t skillId;
+	SKILLTYPE skillType;
+	ATTACKTYPE at;
+	FORMULATYPE ft;
+	SKILL_SPAN ss;
+	uint8_t tartgertypepara;	
+};
+//阵法位置
+enum PHALANX_POS
+{
+	RIGHT_TOP = 1,
+	RIGHT_CENTER = 2,
+	RIGHT_BOTTOM = 3,
+	CENTER_TOP = 4,
+	CENTER_CENTER = 5,
+	CENTER_BOTTOM = 6,
+	LEFT_TOP = 7,
+	LEFT_CENTER = 8,
+	LEFT_BOTTOM = 9,
+	PHALANX_POS_MAX
+};
+struct FightUnit
+{
+	bool isNpc;
+	bool isAttack; //是否是攻方	
+	FightForce* myForce;	
+	PHALANX_POS pos;
+	uint32_t maxHp;	
+	void  havePassiveSkill(uint32_t psTypeId, lua_Object psTbl);
+	void getPsParam(uint32_t psTypeId, lua_Object psTbl);
+	
+	uint8_t getTriggerPsCount(uint32_t psId);
+	void setTriggerPsCount(uint32_t psId, uint8_t triggerCount);
+	FightProp* getFightProp();	
+};
+//一次攻击的信息
+struct FightAttack
+{
+	uint8_t attackPos; //出手方位置
+	uint32_t skillId;
+	uint32_t chakra;	
+};
+//伙伴位置+攻击效果（普通、暴击、闪避、反击、被反击）+伤害值
+struct VictimerInfo
+{
+	uint8_t mypos;
+	ATTACK_EFFECT ae;
+	int harmValue;
+	int modChakra;
+	uint32_t skillId;
+};
+//战场
+class FightField
+{
+	FIGHT_FIELD_TYPE fft;
+	Player* attacher; //攻击方	
+	void addBuf(FightUnit* pCaster, FightUnit* pVictimer, FightAttack* pFa, uint32_t effectId);	
+	void addBuf(FightUnit* pUnit, FightForce* pForce, FightAttack* pFa, uint32_t effectId, SkillTem* pSkill);	
+};
+
+
+
